@@ -29,10 +29,13 @@ const Layout = ({ children }) => {
     setIsUniSatWalletConnectClicked,
     isUniSatWalletConnected,
     setIsUniSatWalletConnected,
+
+    LABB_endpoint
   } = useWallet();
 
   const [walletName, setWalletName] = useState("");
   const [btcBalance, setBtcBalance] = useState("");
+  const [labbBalance, setLabbBalance] = useState("");
   const [transactionAmount, setTransactionAmount] = useState(0);
   const [MessageObject, setMessageObject] = useState("");
 
@@ -127,12 +130,124 @@ const Layout = ({ children }) => {
     }
   };
 
+  // Calculate Labb Balance
+  const fetchLabbBalance = async (Address) => {
+    const url = `${LABB_endpoint}/labb_balance`;
+    try {
+      if( ordinalsAddress==''){
+        return;
+      }
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ address: ordinalsAddress }), // Assuming ordinalsAddress is a state or prop
+      });
+      const data = await response.json();
+      setLabbBalance(data.balance/100000000);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   useEffect(() => {
     fetchBTCSum(ordinalsAddress);
+    fetchLabbBalance(ordinalsAddress);
   }, [ordinalsAddress]);
 
   // Test Transaction
   const sendTestTransaction = () => {
+    const handleTransactionAmountChange = (event) => {
+      const value = parseFloat(event.target.value);
+      if (value >= 0) {
+        // Only update the state if the value is non-negative
+        setTransactionAmount(value);
+      }
+    };
+    const handleMaxAmount = () => {
+      const maxAmount = Math.max(btcBalance - 0.0001, 0);
+      setTransactionAmount(maxAmount);
+    };
+    const onSendBtcClick = async () => {
+      const recipients_address = ordinalsAddress;
+      const recipients_amountSats = parseInt(transactionAmount * 100000000);
+
+      if (isXverseWalletConnected) {
+        const sendBtcOptions = {
+          payload: {
+            network: {
+              type: NETWORK,
+            },
+            recipients: [
+              {
+                address: recipients_address,
+                amountSats: recipients_amountSats,
+              },
+            ],
+            senderAddress: paymentAddress,
+          },
+          onFinish: (response) => {
+            alert(response);
+          },
+          onCancel: () => alert("Canceled"),
+        };
+        await sendBtcTransaction(sendBtcOptions);
+      }
+      if (isUniSatWalletConnected) {
+        const unisat = window.unisat;
+        try {
+          await unisat.sendBitcoin(recipients_address, recipients_amountSats);
+        } catch (e) {
+          alert("Canceled");
+          console.log(e);
+        }
+      }
+    };
+
+    return (
+      <div className="flex flex-row mx-5 relative">
+        <button
+          type="button"
+          className="relative w-full bg-white border border-gray-300 rounded-lg pl-3 pr-10 py-2 text-left cursor-default focus:outline-none focus:ring-1 sm:text-sm"
+          aria-haspopup="listbox"
+          aria-expanded="true"
+          aria-labelledby="listbox-label"
+        >
+          <input
+            style={{
+              width: "100%",
+              height: "100%",
+              color: "black",
+              border: "none",
+              background: "transparent",
+              outline: "none",
+            }}
+            type="number"
+            min="0"
+            value={transactionAmount}
+            onChange={handleTransactionAmountChange}
+          />
+          <span className="ml-3 absolute inset-y-0 right-0 flex items-center pr-2 ">
+            <p
+              style={{ color: "black", cursor: "pointer" }}
+              onClick={handleMaxAmount}
+            >
+              Max
+            </p>
+          </span>
+        </button>
+        <button
+          className="bg-[#FF7248] px-2 border rounded-lg font-bold"
+          onClick={onSendBtcClick}
+        >
+          Send Transaction
+        </button>
+      </div>
+    );
+  };
+
+  const sendLabbTransaction = () => {
     const handleTransactionAmountChange = (event) => {
       const value = parseFloat(event.target.value);
       if (value >= 0) {
@@ -324,11 +439,17 @@ const Layout = ({ children }) => {
       <div className="flex flex-col text-white px-5 py-5">
         Btc Balance: {btcBalance}
       </div>
+      <div className="flex flex-col text-white px-5 py-5">
+        Labb Balance: {labbBalance}
+      </div>
       <div className="flex flex-row items-center text-white px-5 py-5">
         Send Btc Transaction: {sendTestTransaction()}
       </div>
-      <div className="flex flex-row items-center text-white px-5 py-5">
+      {/* <div className="flex flex-row items-center text-white px-5 py-5">
         Sign Message: {signTextMessage()}
+      </div> */}
+      <div className="flex flex-row items-center text-white px-5 py-5">
+        Send Labb Transaction: {sendLabbTransaction()}
       </div>
       {isModalOpen && (
         <div

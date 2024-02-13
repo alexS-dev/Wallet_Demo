@@ -21,7 +21,9 @@ export const WalletProvider = ({ children }) => {
   const [isUniSatWalletConnected, setIsUniSatWalletConnected] = useState(false);
 
   const [NETWORK, setNetwork] = useState("Testnet");
-
+  const [LABB_endpoint, setLABB_endpoint] = useState(
+    "https://testnet.bisonlabs.io/labbs_endpoint"
+  );
   return (
     <WalletContext.Provider
       value={{
@@ -43,6 +45,8 @@ export const WalletProvider = ({ children }) => {
         setIsUniSatWalletConnected,
         NETWORK,
         setNetwork,
+        LABB_endpoint,
+        setLABB_endpoint,
       }}
     >
       {children}
