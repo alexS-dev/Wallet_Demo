@@ -37,6 +37,7 @@ const Layout = ({ children }) => {
   const [btcBalance, setBtcBalance] = useState("");
   const [labbBalance, setLabbBalance] = useState("");
   const [transactionAmount, setTransactionAmount] = useState(0);
+  const [labbAmount, setLabbAmount] = useState(0);
   const [MessageObject, setMessageObject] = useState("");
 
   // Close Wallet Connect Modal
@@ -252,47 +253,38 @@ const Layout = ({ children }) => {
       const value = parseFloat(event.target.value);
       if (value >= 0) {
         // Only update the state if the value is non-negative
-        setTransactionAmount(value);
+        setLabbAmount(value);
       }
     };
     const handleMaxAmount = () => {
       const maxAmount = Math.max(btcBalance - 0.0001, 0);
       setTransactionAmount(maxAmount);
     };
-    const onSendBtcClick = async () => {
-      const recipients_address = ordinalsAddress;
-      const recipients_amountSats = parseInt(transactionAmount * 100000000);
 
-      if (isXverseWalletConnected) {
-        const sendBtcOptions = {
-          payload: {
-            network: {
-              type: NETWORK,
-            },
-            recipients: [
-              {
-                address: recipients_address,
-                amountSats: recipients_amountSats,
-              },
-            ],
-            senderAddress: paymentAddress,
-          },
-          onFinish: (response) => {
-            alert(response);
-          },
-          onCancel: () => alert("Canceled"),
-        };
-        await sendBtcTransaction(sendBtcOptions);
+    const onSendLabbClick = async () => {
+      const amtMultiplied = parseInt(labbAmount) * Math.pow(10, 8);
+
+      const payload = {
+        method: "peg_in",
+        rAddr: ordinalsAddress,
+        amt: amtMultiplied
+      };
+
+      const requestOptions = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      };
+      const ec = new TextEncoder()
+      const response = await fetch(`${LABB_endpoint}/bridge_peg_in`, requestOptions);
+      const responseData = await response.json();
+      if(!responseData.address){
+        alert(" bridge peg in address null!");
+        return;
       }
-      if (isUniSatWalletConnected) {
-        const unisat = window.unisat;
-        try {
-          await unisat.sendBitcoin(recipients_address, recipients_amountSats);
-        } catch (e) {
-          alert("Canceled");
-          console.log(e);
-        }
-      }
+      // setLabbResponse(responseData);
+      // console.log("sign transfer address:"+ responseData.address+",amount: "+data.amount)
+      // setIsClicked(true); 
     };
 
     return (
@@ -315,7 +307,7 @@ const Layout = ({ children }) => {
             }}
             type="number"
             min="0"
-            value={transactionAmount}
+            value={labbAmount}
             onChange={handleTransactionAmountChange}
           />
           <span className="ml-3 absolute inset-y-0 right-0 flex items-center pr-2 ">
@@ -329,7 +321,7 @@ const Layout = ({ children }) => {
         </button>
         <button
           className="bg-[#FF7248] px-2 border rounded-lg font-bold"
-          onClick={onSendBtcClick}
+          onClick={onSendLabbClick}
         >
           Send Transaction
         </button>
